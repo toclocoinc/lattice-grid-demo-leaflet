@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Leaflet Map with an Attribute Table | Lattice Grid</title>
+        <link rel="icon" href="data:,">
+        <script>
+            // `?theme=dark` puts the whole page, grid included, under data-theme="dark".
+            if (new URLSearchParams(location.search).get('theme') === 'dark') document.documentElement.dataset.theme = 'dark';
+        </script>
+        <script>
+            // Where the library comes from: the published release from the CDN, or with
+            // `?local` a local build from vendor/ (not part of this repository).
+            const LOCAL = new URLSearchParams(location.search).has('local');
+            const LIB = LOCAL ? 'vendor/' : 'https://cdn.jsdelivr.net/npm/@toclocoinc/lattice-grid@1.76.0/';
+            document.write('<link rel="stylesheet" href="' + LIB + 'lattice-grid.min.css">');
+            for (const file of ['lattice-grid.min.js', 'modules/layout.min.js', 'modules/kpi.min.js',
+                'modules/geometry.min.js', 'modules/leaflet.min.js']) {
+                document.write('<script src="' + LIB + file + '"><' + '/script>');
+            }
+        </script>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+        <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+        <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.1.4/leaflet-maplibre-gl.js"></script>
+        <script src="data.js"></script>
+        <script src="loading.js"></script>
+        <script src="layers.js"></script>
+        <style>
+            body { margin: 0; font: 13px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+                   background: var(--lattice-background, #fff); color: var(--lattice-foreground, #14171a); }
+            .panel { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; padding: 4px 8px; }
+            .panel__head { font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+                           color: var(--lattice-foreground-muted, #5b6570); padding-bottom: 4px; }
+            .panel__body { flex: 1 1 auto; min-height: 0; position: relative; overflow: auto; }
+            #map-body .panel__body { overflow: hidden; }
+            #map { position: absolute; inset: 0; background: #e9eef2; }
+            .toggle { display: block; margin: 8px 0 2px; font-weight: 600; }
+            .legend { display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: 11px; align-items: center; }
+            .sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 3px; vertical-align: -1px; }
+            .sw.sq { border-radius: 2px; }
+            .goto { margin-top: 10px; }
+            .goto button { font: inherit; font-size: 11px; padding: 1px 8px; margin-right: 4px; }
+            #readout { margin-top: 10px; font-variant-numeric: tabular-nums; }
+            #footer-body { font-size: 11px; color: var(--lattice-foreground-muted, #5b6570); }
+            #footer-body a { color: var(--lattice-accent, #1f6feb); }
+            /* Over the map and table windows (columns 1-15 of 24, rows 1-19 of 20) until the first rows are in;
+               above Leaflet's controls (z-index 1000). */
+            .loading { position: fixed; top: 6px; left: 6px; width: calc(62.5% - 9px); height: calc(95% - 9px); z-index: 1100;
+                       display: flex; align-items: center; justify-content: center; text-align: center; padding: 1rem;
+                       box-sizing: border-box; background: rgba(255, 255, 255, .9); color: #14171a; font-size: 15px; }
+            [data-theme="dark"] .loading { background: rgba(20, 23, 26, .9); color: #e6e8ea; }
+            .loading[hidden] { display: none; }
+            .loading button, #status button { font: inherit; margin-left: .4rem; padding: .1rem .6rem; }
+        </style>
+    </head>
+    <body>
+        <div id="status" style="position: fixed; top: 4px; right: 10px; z-index: 1101; font-size: 11px">Starting DuckDB-Wasm&hellip;</div>
+        <div id="container" style="height: 100vh"></div>
+        <div class="loading" id="loading" role="status" aria-live="polite"><p id="loading-text">Starting DuckDB-WASM&hellip;</p></div>
+        <template id="layers-panel">
+            <span class="toggle">Plants (fewer than the cap in view) &middot; click one to select its row</span>
+            <div class="legend" id="fuel-legend"></div>
+            <div class="legend">size by MW: <span id="size-legend"></span></div>
+            <span class="toggle">Density (more plants in view than the cap) &middot; plants per cell</span>
+            <div class="legend" id="density-legend"></div>
+            <div class="goto">Go to:
+                <button type="button" data-view="25,10,2">World</button>
+                <button type="button" data-view="51.5,-0.12,10">London</button>
+                <button type="button" data-view="35.68,139.75,10">Tokyo</button>
+                <button type="button" data-view="40.71,-74,10">New York</button>
+                <span style="font-size: 11px">&mdash; a <code>setView</code> in code narrows the table too</span>
+            </div>
+            <div id="readout" aria-live="polite"></div>
+        </template>
+        <template id="footer-panel">
+            Data: <a href="https://github.com/wri/global-power-plant-database" target="_blank" rel="noopener">World Resources Institute, Global Power Plant Database v1.3</a> (CC BY 4.0)
+            &middot; country outlines: <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a> (public domain)
+            &middot; basemap: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> Positron, <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">&copy; OpenMapTiles</a>, data <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">&copy; OpenStreetMap contributors</a>
+            &middot; drawing: <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a> + <a href="https://github.com/maplibre/maplibre-gl-leaflet" target="_blank" rel="noopener">maplibre-gl-leaflet</a>
+            &middot; Lattice Grid <span id="version"></span>
+        </template>
+        <script>
+            // Bound to toclocoinc.github.io; does nothing anywhere else. localhost never needs a key.
+            LatticeGrid.setLicence('LG1.eyJ2IjoxLCJwIjoibGF0dGljZS1ncmlkIiwidCI6IlRPQ0xPQ08gSW5jIC0gcHVibGljIGRlbW9zIiwiZSI6IjIwMzAtMDEtMDEiLCJkIjpbInRvY2xvY29pbmMuZ2l0aHViLmlvIl19.9De42ua3aCGpiMB6EVRP7Tv-upUlDI-0T07rlSPzvCrsqg8t4YJi7SRnStEpAg48uzmcG7il1fR_TfwkUE7iCA');
+        </script>
+        <script src="app.js"></script>
+    </body>
+</html>
