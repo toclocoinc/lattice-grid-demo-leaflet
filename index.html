@@ -13,7 +13,7 @@
             // Where the library comes from: the published release from the CDN, or with
             // `?local` a local build from vendor/ (not part of this repository).
             const LOCAL = new URLSearchParams(location.search).has('local');
-            const LIB = LOCAL ? 'vendor/' : 'https://cdn.jsdelivr.net/npm/@toclocoinc/lattice-grid@1.78.0/';
+            const LIB = LOCAL ? 'vendor/' : 'https://cdn.jsdelivr.net/npm/@toclocoinc/lattice-grid@1.79.0/';
             document.write('<link rel="stylesheet" href="' + LIB + 'lattice-grid.min.css">');
             for (const file of ['lattice-grid.min.js', 'modules/layout.min.js', 'modules/kpi.min.js',
                 'modules/geometry.min.js', 'modules/leaflet.min.js']) {
