@@ -13,7 +13,7 @@
             // Where the library comes from: the published release from the CDN, or with
             // `?local` a local build from vendor/ (not part of this repository).
             const LOCAL = new URLSearchParams(location.search).has('local');
-            const LIB = LOCAL ? 'vendor/' : 'https://cdn.jsdelivr.net/npm/@toclocoinc/lattice-grid@1.86.4/';
+            const LIB = LOCAL ? 'vendor/' : 'https://cdn.jsdelivr.net/npm/@toclocoinc/lattice-grid@1.86.7/';
             document.write('<link rel="stylesheet" href="' + LIB + 'lattice-grid.min.css">');
             for (const file of ['lattice-grid.min.js', 'modules/layout.min.js', 'modules/kpi.min.js',
                 'modules/geometry.min.js', 'modules/leaflet.min.js']) {
@@ -80,7 +80,7 @@
             &middot; country outlines: <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a> (public domain)
             &middot; basemap: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> Positron, <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">&copy; OpenMapTiles</a>, data <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">&copy; OpenStreetMap contributors</a>
             &middot; drawing: <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a> + <a href="https://github.com/maplibre/maplibre-gl-leaflet" target="_blank" rel="noopener">maplibre-gl-leaflet</a>
-            &middot; Lattice Grid <span id="version"></span>
+            &middot; Built with <a href="https://www.latticegrid.dev/operational-software/">Lattice Grid</a> <span id="version"></span>
         </template>
         <script>
             // Bound to toclocoinc.github.io; does nothing anywhere else. localhost never needs a key.
